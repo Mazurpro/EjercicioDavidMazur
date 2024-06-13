@@ -12,7 +12,6 @@ namespace EjercicioDavidMazur.Services
 
         public TareaService()
         {
-            // Generar 30,000 tareas aleatorias con estados controlados al inicializar el servicio
             GenerarTareasAleatorias(30000);
         }
 
