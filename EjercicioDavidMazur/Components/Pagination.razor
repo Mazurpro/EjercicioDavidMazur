@@ -1,0 +1,32 @@
+﻿@code {
+    [Parameter]
+    public int TotalItems { get; set; }
+    [Parameter]
+    public int PageSize { get; set; }
+    [Parameter]
+    public EventCallback<int> OnPageChanged { get; set; }
+
+    private int totalPages => (int)Math.Ceiling((double)TotalItems / PageSize);
+    private int currentPage = 0;
+
+    private async Task CambiarPagina(int pageIndex)
+    {
+        currentPage = pageIndex;
+        await OnPageChanged.InvokeAsync(pageIndex);
+    }
+}
+
+<div>
+    <button @onclick="() => CambiarPagina(currentPage - 1)" disabled="@(currentPage == 0)">Anterior</button>
+    @for (int i = 0; i < totalPages; i++)
+    {
+        <button @onclick="() => CambiarPagina(i)" class="@(currentPage == i ? "selected" : "")">@i + 1</button>
+    }
+    <button @onclick="() => CambiarPagina(currentPage + 1)" disabled="@(currentPage == totalPages - 1)">Siguiente</button>
+</div>
+
+<style>
+    .selected {
+        font-weight: bold;
+    }
+</style>

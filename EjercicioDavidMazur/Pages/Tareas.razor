@@ -1,0 +1,192 @@
+﻿@page "/tareas"
+@using EjercicioDavidMazur.Models
+@using EjercicioDavidMazur.Services
+@inject TareaService TareaService
+
+<h3>Lista de Tareas</h3>
+<button @onclick="NuevaTarea">Añadir Tarea</button>
+<button @onclick="EliminarTareasSeleccionadas">Eliminar Seleccionadas</button>
+
+@if (tareasPaginadas.Any())
+{
+    <table>
+        <thead>
+            <tr>
+                <th>Seleccionar</th>
+                <th>Descripción</th>
+                <th>Estado</th>
+                <th>Bloqueada</th>
+                <th>Fecha Creación</th>
+                <th>Fecha Vencimiento</th>
+                <th>Prioridad</th>
+                <th>Responsable</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var tarea in tareasPaginadas)
+            {
+                <tr>
+                    <td><input type="checkbox" @bind="tarea.Seleccionada" /></td>
+                    <td>@tarea.Descripcion</td>
+                    <td>
+                        <InputSelect @bind-Value="tarea.Estado" @onchange="() => ActualizarTarea(tarea)">
+                            @foreach (var estado in Enum.GetValues(typeof(EstadoTarea)))
+                            {
+                                <option value="@estado">@estado</option>
+                            }
+                        </InputSelect>
+                    </td>
+                    <td>@(tarea.Bloqueada ? "Sí" : "No")</td>
+                    <td>@tarea.FechaCreacion.ToString("dd/MM/yyyy")</td>
+                    <td>@tarea.FechaVencimiento.ToString("dd/MM/yyyy")</td>
+                    <td>@tarea.Prioridad</td>
+                    <td>@tarea.Responsable</td>
+                    <td>
+                        <button @onclick="() => EditarTarea(tarea)">Editar</button>
+                        <button @onclick="() => EliminarTarea(tarea.Id)">Eliminar</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p>No hay tareas disponibles.</p>
+}
+
+<Pagination TotalItems="totalTareas" PageSize="pageSize" OnPageChanged="CargarTareasPaginadas" />
+
+@if (tareaEditando != null)
+{
+    <EditForm Model="tareaEditando" OnValidSubmit="GuardarTarea">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div>
+            <label>Descripción:</label>
+            <InputText @bind-Value="tareaEditando.Descripcion" />
+        </div>
+
+        <div>
+            <label>Estado:</label>
+            <InputSelect @bind-Value="tareaEditando.Estado">
+                @foreach (var estado in Enum.GetValues(typeof(EstadoTarea)))
+                {
+                    <option value="@estado">@estado</option>
+                }
+            </InputSelect>
+        </div>
+
+        <div>
+            <label>Bloqueada:</label>
+            <InputCheckbox @bind-Value="tareaEditando.Bloqueada" />
+        </div>
+
+        <div>
+            <label>Fecha Vencimiento:</label>
+            <InputDate @bind-Value="tareaEditando.FechaVencimiento" />
+        </div>
+
+        <div>
+            <label>Prioridad:</label>
+            <InputText @bind-Value="tareaEditando.Prioridad" />
+        </div>
+
+        <div>
+            <label>Responsable:</label>
+            <InputText @bind-Value="tareaEditando.Responsable" />
+        </div>
+
+        <button type="submit">Guardar</button>
+        <button type="button" @onclick="CancelarEdicion">Cancelar</button>
+    </EditForm>
+}
+
+@code {
+    private List<Tarea> tareasPaginadas;
+    private int totalTareas;
+    private int pageSize = 10;
+    private int currentPage = 0;
+    private Tarea tareaEditando;
+
+    protected override void OnInitialized()
+    {
+        totalTareas = TareaService.TotalTareas();
+        CargarTareasPaginadas(0);
+    }
+
+    private void CargarTareasPaginadas(int pageIndex)
+    {
+        currentPage = pageIndex;
+        tareasPaginadas = TareaService.ObtenerTareasPaginadas(pageIndex, pageSize).ToList();
+    }
+
+    private void NuevaTarea()
+    {
+        tareaEditando = new Tarea
+        {
+            Descripcion = "Nueva tarea",
+            Estado = EstadoTarea.Planificada,
+            Bloqueada = false,
+            FechaVencimiento = DateTime.Now.AddDays(7),
+            Prioridad = "Media",
+            Responsable = "Sin asignar"
+        };
+    }
+
+    private void GuardarTarea()
+    {
+        if (tareaEditando.Id == 0)
+        {
+            TareaService.AñadirTarea(tareaEditando);
+        }
+        else
+        {
+            TareaService.ActualizarTarea(tareaEditando);
+        }
+        tareaEditando = null;
+        CargarTareasPaginadas(currentPage);
+    }
+
+    private void CancelarEdicion()
+    {
+        tareaEditando = null;
+    }
+
+    private void EditarTarea(Tarea tarea)
+    {
+        tareaEditando = new Tarea
+        {
+            Id = tarea.Id,
+            Descripcion = tarea.Descripcion,
+            Estado = tarea.Estado,
+            Bloqueada = tarea.Bloqueada,
+            FechaVencimiento = tarea.FechaVencimiento,
+            Prioridad = tarea.Prioridad,
+            Responsable = tarea.Responsable
+        };
+    }
+
+    private void EliminarTarea(int id)
+    {
+        TareaService.EliminarTarea(id);
+        CargarTareasPaginadas(currentPage);
+    }
+
+    private void EliminarTareasSeleccionadas()
+    {
+        var tareasSeleccionadas = tareasPaginadas.Where(t => t.Seleccionada).ToList();
+        foreach (var tarea in tareasSeleccionadas)
+        {
+            TareaService.EliminarTarea(tarea.Id);
+        }
+        CargarTareasPaginadas(currentPage);
+    }
+
+    private void ActualizarTarea(Tarea tarea)
+    {
+        TareaService.ActualizarTarea(tarea);
+    }
+}
